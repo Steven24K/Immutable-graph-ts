@@ -1,0 +1,21 @@
+{
+  "name": "immutable-graph-ts",
+  "version": "1.0.0",
+  "description": "A graph parsing framework for Typescript",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc", 
+    "watch": "tsc -w",
+    "start": "node build/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "graph",
+    "typescript"
+  ],
+  "author": "Steven K",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^4.2.3"
+  }
+}

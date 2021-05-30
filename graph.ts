@@ -159,6 +159,129 @@ const addEdges = <T>(): Func<Pair<T, Edge>[], Func<Matrix<T>, Matrix<T>>> => Fun
     return edges.map(edge => Func<Matrix<T>, Matrix<T>>(G => addEdge(edge.second, some(edge.first), G))).reduce((xs, x) => xs.then(x), Identity())
 })
 
+const getRandomArbitrary = (min: number, max: number): number => {
+    return Math.random() * (max - min) + min;
+}
+export interface Vector2D {
+    x: number
+    y: number
+    length: number
+    assign: (v: Vector2D) => Vector2D
+    Plus: (v: Vector2D) => Vector2D
+    Min: (v: Vector2D) => Vector2D
+    divide: (n: number) => Vector2D
+    times: (n: number) => Vector2D
+    equals: (vector: Vector2D) => boolean
+}
+
+export let Vector2D = (x: number, y: number): Vector2D => ({
+    x: x,
+    y: y,
+    Min: function (v: Vector2D): Vector2D {
+        return Vector2D(this.x - v.x, this.y - v.y)
+    },
+    Plus: function (v: Vector2D): Vector2D {
+        return Vector2D(this.x + v.x, this.y + v.y)
+    },
+    assign: function (v: Vector2D): Vector2D {
+        return v
+    },
+    divide: function (n: number): Vector2D {
+        if (n > 0) {
+            return Vector2D(this.x / n, this.y / n)
+        }
+        throw 'Divission by 0'
+
+    },
+    length: Math.sqrt(x ** 2 + y ** 2),
+    times: function (n: number): Vector2D {
+        return Vector2D(this.x * n, this.y * n)
+    }, 
+    equals: function (vector: Vector2D): boolean {
+        return this.x == vector.x && this.y == vector.y
+    }
+
+})
+
+let createLayout = <T>(w: number, h: number): Func<Matrix<T>, Vector2D[]> => Func(g => g.map(_ => Vector2D(Math.ceil(getRandomArbitrary(0, w - 100)), Math.ceil(getRandomArbitrary(0, h - 100)))))
+
+// fruchtermanReingold algorithm
+let fruchtermanReingold = <T>(G: Matrix<T>, W = 1000, H = 1000, iterations = 50, edge_length?: number): Vector2D[] => {
+    let area = W * H
+    let edges = getEdges().f(G)
+    let k = edge_length == undefined ? Math.sqrt(area / G.length) : edge_length //maximum distance of the nodes
+    let fa = (x: number): number => x ** 2 / k // Formula to calculate attractive forces
+    let fr = (x: number): number => k ** 2 / x // Formula to calculate repulsive forces
+
+    // initial positions
+    let positions = createLayout(W, H).f(G)
+    let displacements = G.map(_ => Vector2D(0, 0))
+
+    let t = W / 10
+    let dt = t / (iterations + 1)
+
+    //console.log(`area: ${area}`)
+    //console.log(`k: ${k}`)
+    //console.log(`t: ${t}, dt: ${dt}`)
+
+    for (let i = 1; i <= iterations; i++) {
+        //console.log(`Iteration: ${i}`)
+
+        // Calculate repulsive forces
+        G.forEach((v, indexV) => {
+            displacements[indexV] = Vector2D(0, 0)
+            v.forEach((u, indexU) => { // It doesn't matter if you iterate over v or G
+                if (indexU != indexV) {
+                    let delta = positions[indexV].Min(positions[indexU])
+                    if (delta.length != 0) {
+                        displacements[indexV] = displacements[indexV].Plus(delta.divide(delta.length).times(fr(delta.length)))
+                    }
+
+                }
+            })
+        })
+
+        // Calculate attractive forces
+        edges.forEach(edge => {
+            let delta = positions[edge.toIndex].Min(positions[edge.fromIndex])
+            if (delta.length != 0) {
+                displacements[edge.toIndex] = displacements[edge.toIndex].Min(delta.divide(delta.length).times(fa(delta.length)))
+                displacements[edge.fromIndex] = displacements[edge.fromIndex].Plus(delta.divide(delta.length).times(fa(delta.length)))
+            }
+        })
+
+        // limit max displacement
+        G.forEach((node, index) => {
+            if (displacements[index].length != 0) {
+                positions[index] = positions[index].Plus(displacements[index].divide(displacements[index].length).times(Math.min(displacements.length, t)))
+            }
+            positions[index].x = Math.min(W / 2, Math.max(-W / 2, positions[index].x))
+            positions[index].y = Math.min(H / 2, Math.max(-H / 2, positions[index].y))
+        })
+
+        // reduce the temperature as the layout approaches a better conﬁguration
+        t -= dt
+    }
+
+    //console.log('Done...')
+
+    // Still some nodes appear outsoide of the screen, so just move the position by fixed number
+    return positions.map(vector => vector.Plus(Vector2D(200, 200)))
+}
+
+
+const DFS_util = <T>(G: Matrix<T>, v: number, visited: boolean[]): void => {
+    visited[v] = true 
+    console.log(v)
+
+    let vList = G[v]
+    vList.forEach((node, n) => {
+        if (!visited[n]) {
+            DFS_util(G, n, visited)
+        }
+    })
+}
+
 export interface Graph<T> {
     G: Matrix<T>
     incr: (n?: number) => Graph<T>
@@ -171,6 +294,8 @@ export interface Graph<T> {
     setEdges: <a = any>(...edges: Pair<T, Edge<a>>[]) => Graph<T>
     removeEdge: (edge: Edge) => Graph<T>
     removeEdges: (...edges: Edge[]) => Graph<T>
+    fruchtermanReingold: (W?: number, H?: number, iterations?: number, edge_length?: number) => Vector2D[]
+    DFS: (node: number) => void
     stringify: (f?: (_: Option<T>) => string, brackets?: boolean) => string
 }
 
@@ -272,6 +397,15 @@ export const Graph = <T>(size = 0): Graph<T> => ({
      */
     removeEdges: function (...edges: Edge[]): Graph<T> {
         return ({ ...this, G: removeEdges<T>().f(edges).f(this.G) })
+    },
+
+    fruchtermanReingold: function (W?: number, H?: number, iterations?: number, edge_length?: number): Vector2D[] {
+        return fruchtermanReingold(this.G, W, H, iterations, edge_length)
+    },
+
+    DFS: function (node: number): void {
+        let visited: boolean[] = Array(this.G.length).fill(false)
+        DFS_util(this.G, node, visited)
     },
 
     stringify: function (f: (_: Option<T>) => string = (o) => o.kind == 'none' ? '0' : String(o.v), brackets = true): string {

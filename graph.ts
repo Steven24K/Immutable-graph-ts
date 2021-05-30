@@ -47,6 +47,7 @@ let repeat = function <a>(f: Func<a, a>, n: number): Func<a, a> {
     //     res = res.then(f)
     // }
     // return res
+    if (n > 900) throw `Max size for n: ${n} reached. To prevent maximum recursion depth errors, split this method over a for loop`
 
     if (n <= 0) {
         return Identity<a>() // Return the identity function when n <= 0, basicly means do nothing

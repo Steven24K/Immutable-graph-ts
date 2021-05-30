@@ -16,6 +16,12 @@ g = g.setEdges(
 )
 .removeEdge(mkEdge(4, 0))
 
-console.log(g.stringify(x => x.kind == "none" ? "0" : "1", false))
+
+// Two add 900 nodes 2 times
+for (let c = 0; c <= 100; c++) {
+    g.incr(100)
+}
+
+console.log(g.stringify(x => x.kind == "none" ? "0" : "1"))
 
 console.log(g.getEdgesFrom(2))

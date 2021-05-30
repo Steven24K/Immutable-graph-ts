@@ -5,7 +5,7 @@ The library provides a quick way to create a matrix and some methods to add and 
 
 Sample code: 
 
-```
+```ts
 import { Graph, mkEdge, mkPair } from "./graph";
 
 let g = Graph<boolean>(5)
@@ -30,12 +30,12 @@ console.log(g.stringify(x => x.kind == "none" ? "0" : "1", false))
 The code above will produce the following matrix: 
 ```
 [
-[0, 0, 0, 0, 0, 0,]
-[1, 0, 0, 0, 0, 0,]
 [0, 1, 0, 0, 0, 0,]
-[0, 0, 0, 0, 0, 0,]
 [0, 0, 1, 0, 0, 0,]
-[0, 0, 0, 0, 0, 0,]
+[1, 0, 0, 0, 1, 0,]
+[0, 0, 0, 0, 1, 0,]
+[0, 0, 0, 0, 0, 1,]
+[0, 0, 0, 1, 0, 0,]
 ]
 ```
 
